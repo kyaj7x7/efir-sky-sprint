@@ -1,0 +1,25 @@
+name: Attach verified Sky Sprint package name
+on:
+  push:
+    paths:
+      - .github/workflows/attach-win-unpacked-v111.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and verify
+        env:
+          BASE_URL: https://7x7live.pro/codex-release-upload-20261101
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 "$BASE_URL/sky-sprint-win-unpacked-v1.1.1.zip" -o win-unpacked.zip
+          echo '574fcbe44b15bf2f09dfe36ddb28e9ba798f505c1de40f3055a15b7edb313c24  win-unpacked.zip' | sha256sum --check --status
+          test "$(stat -c%s win-unpacked.zip)" -eq 159463572
+      - name: Attach expected launcher asset name
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload v1.1.1 win-unpacked.zip --repo "$GH_REPO"
