@@ -1,0 +1,30 @@
+name: Temporary local Sky Sprint release publisher
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/codex-publish-v111.yml
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: startsWith(github.event.head_commit.message, 'Codex: publish local Sky Sprint v1.1.1')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and verify local package
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --max-time 1200 'https://7x7live.pro/codex-release-upload-20261101/sky-sprint-win-unpacked-v1.1.1.zip' -o package.zip
+          echo '574fcbe44b15bf2f09dfe36ddb28e9ba798f505c1de40f3055a15b7edb313c24  package.zip' | sha256sum -c -
+          test "$(stat -c%s package.zip)" -eq 159463572
+          unzip -tq package.zip
+          unzip -Z1 package.zip | grep -Fx 'resources/app.asar' >/dev/null
+          unzip -Z1 package.zip | grep -Fx 'Sky Sprint.exe' >/dev/null
+      - name: Create release and upload package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/releases" --method POST -f tag_name=v1.1.1 -f name='Sky Sprint v1.1.1' -f body='Fixes the launch-ticket public key to match the current 7x7Live launcher. Authorization and signed ticket validation remain enabled.' -f draft=false -f prerelease=false -f make_latest=true
+          gh release upload v1.1.1 package.zip#win-unpacked.zip --repo "${GITHUB_REPOSITORY}"
